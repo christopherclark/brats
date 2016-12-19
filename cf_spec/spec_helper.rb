@@ -56,13 +56,30 @@ def add_dot_profile_script_to_app(template_path)
   end
 end
 
-def deploy_app(template:, stack:, buildpack:)
+def redeploy_app(app_name)
+  `
+  pushd cf_spec/fixtures/staticfile/tmp/simple_brats/
+  cf push #{app_name}
+  popd
+  `
+end
+
+def deploy_app(template:, stack:, buildpack:, push_only: false)
   Machete.deploy_app(
     template.path,
     name: template.name,
     buildpack: buildpack,
-    stack: stack
+    stack: stack,
+    push_only: push_only
   )
+end
+
+def bump_buildpack_version(buildpack:)
+  File.write("tmp/#{buildpack}-buildpack/VERSION", '00.00.00')
+  system("pushd tmp/#{buildpack}_buildpack")
+  system('bundle exec buildpack-packager --cached')
+  system('popd')
+  system("cf update-buildpack #{buildpack}-brat-buildpack -p tmp/#{buildpack}-buildpack")
 end
 
 def install_buildpack(buildpack:, branch: BRATS_BRANCH, position: 100)
