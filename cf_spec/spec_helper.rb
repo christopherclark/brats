@@ -57,11 +57,14 @@ def add_dot_profile_script_to_app(template_path)
 end
 
 def redeploy_app(app_name)
-  `
-  pushd cf_spec/fixtures/staticfile/tmp/simple_brats/
-  cf push #{app_name}
-  popd
-  `
+  FileUtils.mkdir_p('cf_spec/fixtures/staticfile/tmp/simple_brats/')
+  Bundler.with_clean_env do
+    system(<<-EOF)
+           cd cf_spec/fixtures/staticfile/tmp/simple_brats/
+           cf push #{app_name}
+           echo "\n\nRedeploying #{app_name}\n\n"
+    EOF
+  end
 end
 
 def deploy_app(template:, stack:, buildpack:, push_only: false)
@@ -75,11 +78,19 @@ def deploy_app(template:, stack:, buildpack:, push_only: false)
 end
 
 def bump_buildpack_version(buildpack:)
+  FileUtils.mkdir_p('tmp')
   File.write("tmp/#{buildpack}-buildpack/VERSION", '00.00.00')
-  system("pushd tmp/#{buildpack}_buildpack")
-  system('bundle exec buildpack-packager --cached')
-  system('popd')
-  system("cf update-buildpack #{buildpack}-brat-buildpack -p tmp/#{buildpack}-buildpack")
+  Bundler.with_clean_env do
+    system(<<-EOF)
+           cd tmp/#{buildpack}-buildpack
+           export BUNDLE_GEMFILE=cf.Gemfile
+           bundle install
+           bundle exec buildpack-packager --cached || bundle exec buildpack-packager cached
+           echo $(ls *_buildpack-cached*.zip | head -n 1)
+           cf update-buildpack #{buildpack}-brat-buildpack -p $(ls *_buildpack-cached*.zip | head -n 1) -i 1 --enable
+           echo "\n\nBumping version of #{buildpack}-brat-buildpack\n\n"
+    EOF
+  end
 end
 
 def install_buildpack(buildpack:, branch: BRATS_BRANCH, position: 100)

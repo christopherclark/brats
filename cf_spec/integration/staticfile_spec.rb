@@ -22,7 +22,7 @@ describe 'For the staticfile buildpack', language: 'staticfile' do
     end
 
     it 'prints useful warning message to stdout' do
-      binding.pry
+      expect(app).to_not have_logged('WARNING: buildpack version changed from')
       bump_buildpack_version(buildpack: 'staticfile')
       redeploy_app(app.app_name)
       expect(app).to have_logged('WARNING: buildpack version changed from')
