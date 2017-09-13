@@ -23,7 +23,7 @@ var bpDir string
 const language = "ruby"
 
 func init() {
-	flag.StringVar(&bpDir, "bpdir", "", "git branch to use (master if empty)")
+	bpDir = os.Getenv("BP_DIR")
 	flag.StringVar(&cutlass.DefaultMemory, "memory", "256M", "default memory for pushed apps")
 	flag.StringVar(&cutlass.DefaultDisk, "disk", "384M", "default disk for pushed apps")
 	flag.Parse()
@@ -32,7 +32,7 @@ func init() {
 var _ = SynchronizedBeforeSuite(func() []byte {
 	// Run once
 	if bpDir == "" {
-		Fail("You must provide bpdir switch")
+		Fail("You must provide BP_DIR env")
 	}
 
 	buildpackVersion := fmt.Sprintf("brats_%s_%s_", language, time.Now().Format("20060102150405"))
