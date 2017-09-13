@@ -7,10 +7,10 @@ import (
 	"reflect"
 	"unsafe"
 
-	"srcd.works/go-git.v4"
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/object"
-	"srcd.works/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 //export c_Commit_get_Hash

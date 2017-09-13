@@ -1,13 +1,18 @@
 package ssh
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
-	"srcd.works/go-git.v4/plumbing/transport"
-	"srcd.works/go-git.v4/plumbing/transport/internal/common"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/internal/common"
 
 	"golang.org/x/crypto/ssh"
+)
+
+var (
+	errAlreadyConnected = errors.New("ssh session already created")
 )
 
 // DefaultClient is the default SSH client.
@@ -15,15 +20,12 @@ var DefaultClient = common.NewClient(&runner{})
 
 type runner struct{}
 
-func (r *runner) Command(cmd string, ep transport.Endpoint, auth transport.AuthMethod) (common.Command, error) {
+func (r *runner) Command(cmd string, ep transport.Endpoint) (common.Command, error) {
 	c := &command{command: cmd, endpoint: ep}
-	if auth != nil {
-		c.setAuth(auth)
-	}
-
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
+
 	return c, nil
 }
 
@@ -36,7 +38,7 @@ type command struct {
 	auth      AuthMethod
 }
 
-func (c *command) setAuth(auth transport.AuthMethod) error {
+func (c *command) SetAuth(auth transport.AuthMethod) error {
 	a, ok := auth.(AuthMethod)
 	if !ok {
 		return transport.ErrInvalidAuthMethod
@@ -71,13 +73,11 @@ func (c *command) Close() error {
 // environment var.
 func (c *command) connect() error {
 	if c.connected {
-		return transport.ErrAlreadyConnected
+		return errAlreadyConnected
 	}
 
-	if c.auth == nil {
-		if err := c.setAuthFromEndpoint(); err != nil {
-			return err
-		}
+	if err := c.setAuthFromEndpoint(); err != nil {
+		return err
 	}
 
 	var err error

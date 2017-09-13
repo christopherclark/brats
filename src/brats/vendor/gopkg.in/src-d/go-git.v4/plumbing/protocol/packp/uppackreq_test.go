@@ -3,8 +3,8 @@ package packp
 import (
 	"bytes"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/protocol/packp/capability"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 
 	. "gopkg.in/check.v1"
 )
@@ -58,7 +58,7 @@ func (s *UploadHavesSuite) TestEncode(c *C) {
 	)
 
 	buf := bytes.NewBuffer(nil)
-	err := uh.Encode(buf, true)
+	err := uh.Encode(buf)
 	c.Assert(err, IsNil)
 	c.Assert(buf.String(), Equals, ""+
 		"0032have 1111111111111111111111111111111111111111\n"+

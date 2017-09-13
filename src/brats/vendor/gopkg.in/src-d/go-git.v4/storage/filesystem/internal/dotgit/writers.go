@@ -5,12 +5,11 @@ import (
 	"io"
 	"sync/atomic"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/format/idxfile"
-	"srcd.works/go-git.v4/plumbing/format/objfile"
-	"srcd.works/go-git.v4/plumbing/format/packfile"
-
-	"srcd.works/go-billy.v1"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/idxfile"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/objfile"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
+	"gopkg.in/src-d/go-git.v4/utils/fs"
 )
 
 // PackWriter is a io.Writer that generates the packfile index simultaneously,
@@ -22,15 +21,15 @@ import (
 type PackWriter struct {
 	Notify func(h plumbing.Hash, i idxfile.Idxfile)
 
-	fs       billy.Filesystem
-	fr, fw   billy.File
+	fs       fs.Filesystem
+	fr, fw   fs.File
 	synced   *syncedReader
 	checksum plumbing.Hash
 	index    idxfile.Idxfile
 	result   chan error
 }
 
-func newPackWrite(fs billy.Filesystem) (*PackWriter, error) {
+func newPackWrite(fs fs.Filesystem) (*PackWriter, error) {
 	fw, err := fs.TempFile(fs.Join(objectsPath, packPath), "tmp_pack_")
 	if err != nil {
 		return nil, err
@@ -249,11 +248,11 @@ func (s *syncedReader) Close() error {
 
 type ObjectWriter struct {
 	objfile.Writer
-	fs billy.Filesystem
-	f  billy.File
+	fs fs.Filesystem
+	f  fs.File
 }
 
-func newObjectWriter(fs billy.Filesystem) (*ObjectWriter, error) {
+func newObjectWriter(fs fs.Filesystem) (*ObjectWriter, error) {
 	f, err := fs.TempFile(fs.Join(objectsPath, packPath), "tmp_obj_")
 	if err != nil {
 		return nil, err

@@ -19,9 +19,9 @@ import (
 	"net/url"
 	"regexp"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/protocol/packp"
-	"srcd.works/go-git.v4/plumbing/protocol/packp/capability"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 )
 
 var (
@@ -30,7 +30,6 @@ var (
 	ErrAuthorizationRequired  = errors.New("authorization required")
 	ErrEmptyUploadPackRequest = errors.New("empty git-upload-pack given")
 	ErrInvalidAuthMethod      = errors.New("invalid auth method")
-	ErrAlreadyConnected       = errors.New("session already established")
 )
 
 const (
@@ -38,16 +37,16 @@ const (
 	ReceivePackServiceName = "git-receive-pack"
 )
 
-// Transport can initiate git-upload-pack and git-receive-pack processes.
-// It is implemented both by the client and the server, making this a RPC.
-type Transport interface {
-	// NewUploadPackSession starts a git-upload-pack session for an endpoint.
-	NewUploadPackSession(Endpoint, AuthMethod) (UploadPackSession, error)
-	// NewReceivePackSession starts a git-receive-pack session for an endpoint.
-	NewReceivePackSession(Endpoint, AuthMethod) (ReceivePackSession, error)
+// Client can initiate git-fetch-pack and git-send-pack processes.
+type Client interface {
+	// NewFetchPackSession starts a git-fetch-pack session for an endpoint.
+	NewFetchPackSession(Endpoint) (FetchPackSession, error)
+	// NewSendPackSession starts a git-send-pack session for an endpoint.
+	NewSendPackSession(Endpoint) (SendPackSession, error)
 }
 
 type Session interface {
+	SetAuth(auth AuthMethod) error
 	// AdvertisedReferences retrieves the advertised references for a
 	// repository.
 	// If the repository does not exist, returns ErrRepositoryNotFound.
@@ -61,30 +60,26 @@ type AuthMethod interface {
 	Name() string
 }
 
-// UploadPackSession represents a git-upload-pack session.
-// A git-upload-pack session has two steps: reference discovery
-// (AdvertisedReferences) and uploading pack (UploadPack).
-type UploadPackSession interface {
+// FetchPackSession represents a git-fetch-pack session.
+// A git-fetch-pack session has two steps: reference discovery
+// (`AdvertisedReferences` function) and fetching pack (`FetchPack` function).
+// In that order.
+type FetchPackSession interface {
 	Session
-	// UploadPack takes a git-upload-pack request and returns a response,
-	// including a packfile. Don't be confused by terminology, the client
-	// side of a git-upload-pack is called git-fetch-pack, although here
-	// the same interface is used to make it RPC-like.
-	UploadPack(*packp.UploadPackRequest) (*packp.UploadPackResponse, error)
+	// FetchPack takes a request and returns a reader for the packfile
+	// received from the server.
+	FetchPack(*packp.UploadPackRequest) (*packp.UploadPackResponse, error)
 }
 
-// ReceivePackSession represents a git-receive-pack session.
-// A git-receive-pack session has two steps: reference discovery
-// (AdvertisedReferences) and receiving pack (ReceivePack).
+// SendPackSession represents a git-send-pack session.
+// A git-send-pack session has two steps: reference discovery
+// (`AdvertisedReferences` function) and sending pack (`SendPack` function).
 // In that order.
-type ReceivePackSession interface {
+type SendPackSession interface {
 	Session
-	// ReceivePack sends an update references request and a packfile
-	// reader and returns a ReportStatus and error. Don't be confused by
-	// terminology, the client side of a git-receive-pack is called
-	// git-send-pack, although here the same interface is used to make it
-	// RPC-like.
-	ReceivePack(*packp.ReferenceUpdateRequest) (*packp.ReportStatus, error)
+	// UpdateReferences sends an update references request and a packfile
+	// reader and returns a ReportStatus and error.
+	SendPack(*packp.ReferenceUpdateRequest) (*packp.ReportStatus, error)
 }
 
 type Endpoint url.URL

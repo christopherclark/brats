@@ -4,18 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/format/packfile"
-	"srcd.works/go-git.v4/plumbing/storer"
-	"srcd.works/go-git.v4/plumbing/transport"
-	"srcd.works/go-git.v4/plumbing/transport/client"
-	"srcd.works/go-git.v4/storage/filesystem"
-	"srcd.works/go-git.v4/storage/memory"
+	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
 
-	"github.com/src-d/go-git-fixtures"
 	. "gopkg.in/check.v1"
-	"srcd.works/go-billy.v1/memfs"
-	"srcd.works/go-billy.v1/osfs"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -25,21 +19,15 @@ type BaseSuite struct {
 	Repository *Repository
 	Storer     storer.EncodedObjectStorer
 
-	backupProtocol transport.Transport
-	cache          map[string]*Repository
+	cache map[string]*Repository
 }
 
 func (s *BaseSuite) SetUpSuite(c *C) {
 	s.Suite.SetUpSuite(c)
-	s.installMockProtocol()
+	s.installMockProtocol(c)
 	s.buildBasicRepository(c)
 
 	s.cache = make(map[string]*Repository, 0)
-}
-
-func (s *BaseSuite) TearDownSuite(c *C) {
-	s.Suite.TearDownSuite(c)
-	s.uninstallMockProtocol()
 }
 
 func (s *BaseSuite) buildBasicRepository(c *C) {
@@ -49,13 +37,7 @@ func (s *BaseSuite) buildBasicRepository(c *C) {
 }
 
 func (s *BaseSuite) NewRepository(f *fixtures.Fixture) *Repository {
-	fs := osfs.New(f.DotGit().Base())
-	st, err := filesystem.NewStorage(fs)
-	if err != nil {
-		panic(err)
-	}
-
-	r, err := Open(st, fs)
+	r, err := NewFilesystemRepository(f.DotGit().Base())
 	if err != nil {
 		panic(err)
 	}
@@ -69,12 +51,13 @@ func (s *BaseSuite) NewRepositoryFromPackfile(f *fixtures.Fixture) *Repository {
 		return r
 	}
 
-	storer := memory.NewStorage()
+	r := NewMemoryRepository()
+
 	p := f.Packfile()
 	defer p.Close()
 
 	n := packfile.NewScanner(p)
-	d, err := packfile.NewDecoder(n, storer)
+	d, err := packfile.NewDecoder(n, r.s)
 	if err != nil {
 		panic(err)
 	}
@@ -84,24 +67,12 @@ func (s *BaseSuite) NewRepositoryFromPackfile(f *fixtures.Fixture) *Repository {
 		panic(err)
 	}
 
-	storer.SetReference(plumbing.NewHashReference(plumbing.HEAD, f.Head))
-
-	r, err := Open(storer, memfs.New())
-	if err != nil {
-		panic(err)
-	}
-
 	s.cache[h] = r
 	return r
 }
 
-func (s *BaseSuite) installMockProtocol() {
-	s.backupProtocol = client.Protocols["https"]
+func (s *BaseSuite) installMockProtocol(c *C) {
 	client.InstallProtocol("https", nil)
-}
-
-func (s *BaseSuite) uninstallMockProtocol() {
-	client.InstallProtocol("https", s.backupProtocol)
 }
 
 func (s *BaseSuite) GetBasicLocalRepositoryURL() string {

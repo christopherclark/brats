@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	. "gopkg.in/check.v1"
-	"github.com/src-d/go-git-fixtures"
-	"srcd.works/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -41,7 +41,6 @@ func (s *IndexSuite) TestDecodeEntries(c *C) {
 	c.Assert(idx.Entries, HasLen, 9)
 
 	e := idx.Entries[0]
-
 	c.Assert(e.CreatedAt.Unix(), Equals, int64(1480626693))
 	c.Assert(e.CreatedAt.Nanosecond(), Equals, 498593596)
 	c.Assert(e.ModifiedAt.Unix(), Equals, int64(1480626693))
@@ -112,8 +111,10 @@ func (s *IndexSuite) TestDecodeMergeConflict(c *C) {
 	// stagged files
 	for i, e := range idx.Entries[4:7] {
 		c.Assert(e.Stage, Equals, expected[i].Stage)
-		c.Assert(e.CreatedAt.IsZero(), Equals, true)
-		c.Assert(e.ModifiedAt.IsZero(), Equals, true)
+		c.Assert(e.CreatedAt.Unix(), Equals, int64(0))
+		c.Assert(e.CreatedAt.Nanosecond(), Equals, 0)
+		c.Assert(e.ModifiedAt.Unix(), Equals, int64(0))
+		c.Assert(e.ModifiedAt.Nanosecond(), Equals, 0)
 		c.Assert(e.Dev, Equals, uint32(0))
 		c.Assert(e.Inode, Equals, uint32(0))
 		c.Assert(e.UID, Equals, uint32(0))

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"srcd.works/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 
 	. "gopkg.in/check.v1"
 )
@@ -13,8 +13,7 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 type ClientSuite struct {
-	Endpoint  transport.Endpoint
-	EmptyAuth transport.AuthMethod
+	Endpoint transport.Endpoint
 }
 
 var _ = Suite(&ClientSuite{})
@@ -27,7 +26,7 @@ func (s *ClientSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *UploadPackSuite) TestNewClient(c *C) {
+func (s *FetchPackSuite) TestNewClient(c *C) {
 	roundTripper := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -77,9 +76,10 @@ func (s *ClientSuite) testNewHTTPError(c *C, code int, msg string) {
 
 func (s *ClientSuite) TestSetAuth(c *C) {
 	auth := &BasicAuth{}
-	r, err := DefaultClient.NewUploadPackSession(s.Endpoint, auth)
+	r, err := DefaultClient.NewFetchPackSession(s.Endpoint)
 	c.Assert(err, IsNil)
-	c.Assert(auth, Equals, r.(*upSession).auth)
+	r.SetAuth(auth)
+	c.Assert(auth, Equals, r.(*fetchPackSession).auth)
 }
 
 type mockAuth struct{}
@@ -88,6 +88,7 @@ func (*mockAuth) Name() string   { return "" }
 func (*mockAuth) String() string { return "" }
 
 func (s *ClientSuite) TestSetAuthWrongType(c *C) {
-	_, err := DefaultClient.NewUploadPackSession(s.Endpoint, &mockAuth{})
-	c.Assert(err, Equals, transport.ErrInvalidAuthMethod)
+	r, err := DefaultClient.NewFetchPackSession(s.Endpoint)
+	c.Assert(err, IsNil)
+	c.Assert(r.SetAuth(&mockAuth{}), Equals, transport.ErrInvalidAuthMethod)
 }

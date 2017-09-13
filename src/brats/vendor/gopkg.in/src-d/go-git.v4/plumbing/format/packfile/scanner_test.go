@@ -5,8 +5,8 @@ import (
 	"io"
 
 	. "gopkg.in/check.v1"
-	"github.com/src-d/go-git-fixtures"
-	"srcd.works/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 type ScannerSuite struct {

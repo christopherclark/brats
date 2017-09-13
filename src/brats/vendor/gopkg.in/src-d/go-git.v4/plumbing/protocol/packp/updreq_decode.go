@@ -8,8 +8,8 @@ import (
 	"io"
 	"io/ioutil"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/format/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 )
 
 var (
@@ -225,7 +225,7 @@ func parseCommand(b []byte) (*Command, error) {
 		return nil, errInvalidNewObjId(err)
 	}
 
-	return &Command{Old: oh, New: nh, Name: plumbing.ReferenceName(n)}, nil
+	return &Command{Old: oh, New: nh, Name: n}, nil
 }
 
 func parseHash(s string) (plumbing.Hash, error) {

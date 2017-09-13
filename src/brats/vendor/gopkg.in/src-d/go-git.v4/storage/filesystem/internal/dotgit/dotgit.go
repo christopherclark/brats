@@ -9,16 +9,14 @@ import (
 	"os"
 	"strings"
 
-	"srcd.works/go-git.v4/plumbing"
-
-	"srcd.works/go-billy.v1"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/utils/fs"
 )
 
 const (
 	suffix         = ".git"
 	packedRefsPath = "packed-refs"
 	configPath     = "config"
-	indexPath      = "index"
 	shallowPath    = "shallow"
 
 	objectsPath = "objects"
@@ -53,43 +51,33 @@ var (
 // The DotGit type represents a local git repository on disk. This
 // type is not zero-value-safe, use the New function to initialize it.
 type DotGit struct {
-	fs billy.Filesystem
+	fs fs.Filesystem
 }
 
 // New returns a DotGit value ready to be used. The path argument must
 // be the absolute path of a git repository directory (e.g.
 // "/foo/bar/.git").
-func New(fs billy.Filesystem) *DotGit {
+func New(fs fs.Filesystem) *DotGit {
 	return &DotGit{fs: fs}
 }
 
 // ConfigWriter returns a file pointer for write to the config file
-func (d *DotGit) ConfigWriter() (billy.File, error) {
+func (d *DotGit) ConfigWriter() (fs.File, error) {
 	return d.fs.Create(configPath)
 }
 
 // Config returns a file pointer for read to the config file
-func (d *DotGit) Config() (billy.File, error) {
+func (d *DotGit) Config() (fs.File, error) {
 	return d.fs.Open(configPath)
 }
 
-// IndexWriter returns a file pointer for write to the index file
-func (d *DotGit) IndexWriter() (billy.File, error) {
-	return d.fs.Create(indexPath)
-}
-
-// Index returns a file pointer for read to the index file
-func (d *DotGit) Index() (billy.File, error) {
-	return d.fs.Open(indexPath)
-}
-
 // ShallowWriter returns a file pointer for write to the shallow file
-func (d *DotGit) ShallowWriter() (billy.File, error) {
+func (d *DotGit) ShallowWriter() (fs.File, error) {
 	return d.fs.Create(shallowPath)
 }
 
 // Shallow returns a file pointer for read to the shallow file
-func (d *DotGit) Shallow() (billy.File, error) {
+func (d *DotGit) Shallow() (fs.File, error) {
 	f, err := d.fs.Open(shallowPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -136,7 +124,7 @@ func (d *DotGit) ObjectPacks() ([]plumbing.Hash, error) {
 }
 
 // ObjectPack returns a fs.File of the given packfile
-func (d *DotGit) ObjectPack(hash plumbing.Hash) (billy.File, error) {
+func (d *DotGit) ObjectPack(hash plumbing.Hash) (fs.File, error) {
 	file := d.fs.Join(objectsPath, packPath, fmt.Sprintf("pack-%s.pack", hash.String()))
 
 	pack, err := d.fs.Open(file)
@@ -152,7 +140,7 @@ func (d *DotGit) ObjectPack(hash plumbing.Hash) (billy.File, error) {
 }
 
 // ObjectPackIdx returns a fs.File of the index file for a given packfile
-func (d *DotGit) ObjectPackIdx(hash plumbing.Hash) (billy.File, error) {
+func (d *DotGit) ObjectPackIdx(hash plumbing.Hash) (fs.File, error) {
 	file := d.fs.Join(objectsPath, packPath, fmt.Sprintf("pack-%s.idx", hash.String()))
 	idx, err := d.fs.Open(file)
 	if err != nil {
@@ -202,7 +190,7 @@ func (d *DotGit) Objects() ([]plumbing.Hash, error) {
 }
 
 // Object return a fs.File poiting the object file, if exists
-func (d *DotGit) Object(h plumbing.Hash) (billy.File, error) {
+func (d *DotGit) Object(h plumbing.Hash) (fs.File, error) {
 	hash := h.String()
 	file := d.fs.Join(objectsPath, hash[0:2], hash[2:40])
 

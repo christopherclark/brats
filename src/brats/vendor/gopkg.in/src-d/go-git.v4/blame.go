@@ -8,15 +8,15 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/object"
-	"srcd.works/go-git.v4/utils/diff"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"gopkg.in/src-d/go-git.v4/utils/diff"
 )
 
 type BlameResult struct {
 	Path  string
 	Rev   plumbing.Hash
-	Lines []*Line
+	Lines []*line
 }
 
 // Blame returns the last commit that modified each line of a file in a
@@ -50,16 +50,20 @@ type BlameResult struct {
 // All this work is done in the assignOrigin function which holds all
 // the internal relevant data in a "blame" struct, that is not
 // exported.
+//
+// TODO: ways to improve the efficiency of this function:
+//
+// 1. Improve revlist
+//
+// 2. Improve how to traverse the history (example a backward
+// traversal will be much more efficient)
+//
+// TODO: ways to improve the function in general:
+//
+// 1. Add memoization between revlist and assign.
+//
+// 2. It is using much more memory than needed, see the TODOs below.
 func Blame(c *object.Commit, path string) (*BlameResult, error) {
-	// TODO: ways to improve the efficiency of this function:
-	// 1. Improve revlist
-	// 2. Improve how to traverse the history (example a backward traversal will
-	// be much more efficient)
-	//
-	// TODO: ways to improve the function in general:
-	// 1. Add memoization between revlist and assign.
-	// 2. It is using much more memory than needed, see the TODOs below.
-
 	b := new(blame)
 	b.fRev = c
 	b.path = path
@@ -96,24 +100,23 @@ func Blame(c *object.Commit, path string) (*BlameResult, error) {
 	}, nil
 }
 
-// Line values represent the contents and author of a line in BlamedResult values.
-type Line struct {
-	Author string // email address of the author of the line.
-	Text   string // original text of the line.
+type line struct {
+	author string
+	text   string
 }
 
-func newLine(author, text string) *Line {
-	return &Line{
-		Author: author,
-		Text:   text,
+func newLine(author, text string) *line {
+	return &line{
+		author: author,
+		text:   text,
 	}
 }
 
-func newLines(contents []string, commits []*object.Commit) ([]*Line, error) {
+func newLines(contents []string, commits []*object.Commit) ([]*line, error) {
 	if len(contents) != len(commits) {
 		return nil, errors.New("contents and commits have different length")
 	}
-	result := make([]*Line, 0, len(contents))
+	result := make([]*line, 0, len(contents))
 	for i := range contents {
 		l := newLine(commits[i].Author.Email, contents[i])
 		result = append(result, l)

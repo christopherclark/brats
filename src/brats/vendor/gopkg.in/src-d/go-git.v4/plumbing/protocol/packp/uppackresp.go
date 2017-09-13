@@ -4,8 +4,7 @@ import (
 	"errors"
 	"io"
 
-	"srcd.works/go-git.v4/plumbing/protocol/packp/capability"
-	"srcd.works/go-git.v4/utils/ioutil"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
 )
 
 // ErrUploadPackResponseNotDecoded is returned if Read is called without
@@ -18,8 +17,8 @@ var ErrUploadPackResponseNotDecoded = errors.New("upload-pack-response should be
 type UploadPackResponse struct {
 	ShallowUpdate
 	ServerResponse
+	r io.ReadCloser
 
-	r          io.ReadCloser
 	isShallow  bool
 	isMultiACK bool
 	isOk       bool
@@ -36,16 +35,6 @@ func NewUploadPackResponse(req *UploadPackRequest) *UploadPackResponse {
 		isShallow:  isShallow,
 		isMultiACK: isMultiACK,
 	}
-}
-
-// NewUploadPackResponseWithPackfile creates a new UploadPackResponse instance,
-// and sets its packfile reader.
-func NewUploadPackResponseWithPackfile(req *UploadPackRequest,
-	pf io.ReadCloser) *UploadPackResponse {
-
-	r := NewUploadPackResponse(req)
-	r.r = pf
-	return r
 }
 
 // Decode decodes all the responses sent by upload-pack service into the struct
@@ -65,23 +54,6 @@ func (r *UploadPackResponse) Decode(reader io.ReadCloser) error {
 	r.r = reader
 
 	return nil
-}
-
-// Encode encodes an UploadPackResponse.
-func (r *UploadPackResponse) Encode(w io.Writer) (err error) {
-	if r.isShallow {
-		if err := r.ShallowUpdate.Encode(w); err != nil {
-			return err
-		}
-	}
-
-	if err := r.ServerResponse.Encode(w); err != nil {
-		return err
-	}
-
-	defer ioutil.CheckClose(r.r, &err)
-	_, err = io.Copy(w, r.r)
-	return err
 }
 
 // Read reads the packfile data, if the request was done with any Sideband

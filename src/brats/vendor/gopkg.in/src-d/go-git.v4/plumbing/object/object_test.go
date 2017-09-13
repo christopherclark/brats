@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/src-d/go-git-fixtures"
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/storer"
-	"srcd.works/go-git.v4/storage/filesystem"
+	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
 	. "gopkg.in/check.v1"
 )
@@ -136,16 +136,6 @@ func (s *ObjectsSuite) TestParseSignature(c *C) {
 		`Foo Bar <foo@bar.com>`: {
 			Name:  "Foo Bar",
 			Email: "foo@bar.com",
-			When:  time.Time{},
-		},
-		`crap> <foo@bar.com> 1257894000 +1000`: {
-			Name:  "crap>",
-			Email: "foo@bar.com",
-			When:  MustParseTime("2009-11-11 09:00:00 +1000"),
-		},
-		`><`: {
-			Name:  "",
-			Email: "",
 			When:  time.Time{},
 		},
 		``: {

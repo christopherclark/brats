@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/utils/binary"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/utils/binary"
 )
 
 var (
@@ -37,7 +37,7 @@ const (
 	skipWorkTreeMask  = 1 << 14
 )
 
-// A Decoder reads and decodes index files from an input stream.
+// A Decoder reads and decodes idx files from an input stream.
 type Decoder struct {
 	r         io.Reader
 	hash      hash.Hash
@@ -112,15 +112,8 @@ func (d *Decoder) readEntry(idx *Index) (*Entry, error) {
 	}
 
 	read := entryHeaderLength
-
-	if sec != 0 || nsec != 0 {
-		e.CreatedAt = time.Unix(int64(sec), int64(nsec))
-	}
-
-	if msec != 0 || mnsec != 0 {
-		e.ModifiedAt = time.Unix(int64(msec), int64(mnsec))
-	}
-
+	e.CreatedAt = time.Unix(int64(sec), int64(nsec))
+	e.ModifiedAt = time.Unix(int64(msec), int64(mnsec))
 	e.Stage = Stage(flags>>12) & 0x3
 
 	if flags&entryExtended != 0 {
@@ -207,10 +200,9 @@ func (d *Decoder) padEntry(idx *Index, e *Entry, read int) error {
 	return nil
 }
 
+// TODO: support 'Split index' and 'Untracked cache' extensions, take in count
+//       that they are not supported by jgit or libgit
 func (d *Decoder) readExtensions(idx *Index) error {
-	// TODO: support 'Split index' and 'Untracked cache' extensions, take in
-	// count that they are not supported by jgit or libgit
-
 	var expected []byte
 	var err error
 

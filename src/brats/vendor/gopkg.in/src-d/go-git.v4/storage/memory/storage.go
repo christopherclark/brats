@@ -4,10 +4,9 @@ package memory
 import (
 	"fmt"
 
-	"srcd.works/go-git.v4/config"
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/format/index"
-	"srcd.works/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 var ErrUnsupportedObjectType = fmt.Errorf("unsupported object type")
@@ -20,7 +19,6 @@ type Storage struct {
 	ConfigStorage
 	ObjectStorage
 	ShallowStorage
-	IndexStorage
 	ReferenceStorage
 }
 
@@ -59,23 +57,6 @@ func (c *ConfigStorage) Config() (*config.Config, error) {
 	}
 
 	return c.config, nil
-}
-
-type IndexStorage struct {
-	index *index.Index
-}
-
-func (c *IndexStorage) SetIndex(idx *index.Index) error {
-	c.index = idx
-	return nil
-}
-
-func (c *IndexStorage) Index() (*index.Index, error) {
-	if c.index == nil {
-		c.index = &index.Index{Version: 2}
-	}
-
-	return c.index, nil
 }
 
 type ObjectStorage struct {

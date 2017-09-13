@@ -10,27 +10,22 @@ import (
 	"strconv"
 	"strings"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/storer"
-	"srcd.works/go-git.v4/utils/ioutil"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 const (
 	maxTreeDepth      = 1024
 	startingStackSize = 8
-
-	FileMode       os.FileMode = 0100644
-	ExecutableMode os.FileMode = 0100755
-	SubmoduleMode  os.FileMode = 0160000
-	SymlinkMode    os.FileMode = 0120000
-	TreeMode       os.FileMode = 0040000
+	submoduleMode     = 0160000
+	directoryMode     = 0040000
 )
 
 // New errors defined by this package.
 var (
-	ErrMaxTreeDepth      = errors.New("maximum tree depth exceeded")
-	ErrFileNotFound      = errors.New("file not found")
-	ErrDirectoryNotFound = errors.New("directory not found")
+	ErrMaxTreeDepth = errors.New("maximum tree depth exceeded")
+	ErrFileNotFound = errors.New("file not found")
 )
 
 // Tree is basically like a directory - it references a bunch of other trees
@@ -81,29 +76,10 @@ func (t *Tree) File(path string) (*File, error) {
 
 	blob, err := GetBlob(t.s, e.Hash)
 	if err != nil {
-		if err == plumbing.ErrObjectNotFound {
-			return nil, ErrFileNotFound
-		}
 		return nil, err
 	}
 
 	return NewFile(path, e.Mode, blob), nil
-}
-
-// Tree returns the tree identified by the `path` argument.
-// The path is interpreted as relative to the tree receiver.
-func (t *Tree) Tree(path string) (*Tree, error) {
-	e, err := t.findEntry(path)
-	if err != nil {
-		return nil, ErrDirectoryNotFound
-	}
-
-	tree, err := GetTree(t.s, e.Hash)
-	if err == plumbing.ErrObjectNotFound {
-		return nil, ErrDirectoryNotFound
-	}
-
-	return tree, err
 }
 
 // TreeEntryFile returns the *File for a given *TreeEntry.
@@ -130,10 +106,12 @@ func (t *Tree) findEntry(path string) (*TreeEntry, error) {
 	return tree.entry(pathParts[0])
 }
 
+var errDirNotFound = errors.New("directory not found")
+
 func (t *Tree) dir(baseName string) (*Tree, error) {
 	entry, err := t.entry(baseName)
 	if err != nil {
-		return nil, ErrDirectoryNotFound
+		return nil, errDirNotFound
 	}
 
 	obj, err := t.s.EncodedObject(plumbing.TreeObject, entry.Hash)
@@ -243,14 +221,10 @@ func (t *Tree) decodeFileMode(mode string) (os.FileMode, error) {
 	}
 
 	m := os.FileMode(fm)
-	switch os.FileMode(fm) {
-	case FileMode:
-		m = 0644
-	case ExecutableMode:
-		m = 0755
-	case TreeMode:
+	switch fm {
+	case 0040000: //tree
 		m = m | os.ModeDir
-	case SymlinkMode:
+	case 0120000: //symlink
 		m = m | os.ModeSymlink
 	}
 
@@ -375,7 +349,7 @@ func (w *TreeWalker) Next() (name string, entry TreeEntry, err error) {
 			return
 		}
 
-		if entry.Mode == SubmoduleMode {
+		if entry.Mode == submoduleMode {
 			err = nil
 			continue
 		}

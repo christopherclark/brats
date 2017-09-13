@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	. "gopkg.in/check.v1"
-	"github.com/src-d/go-git-fixtures"
-	"srcd.works/go-git.v4/plumbing/format/packfile"
-	"srcd.works/go-git.v4/storage/memory"
+	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
+	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
 func Test(t *testing.T) { TestingT(t) }

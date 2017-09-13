@@ -3,19 +3,18 @@ package git
 import (
 	"strings"
 
-	"srcd.works/go-git.v4/config"
-	"srcd.works/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 // Storer is a generic storage of objects, references and any information
-// related to a particular repository. The package srcd.works/go-git.v4/storage
-// contains two implementation a filesystem base implementation (such as `.git`)
-// and a memory implementations being ephemeral
+// related to a particular repository. Some Storer implementations persist the
+// information in an system directory (such as `.git`) and others
+// implementations are in memmory being ephemeral
 type Storer interface {
 	storer.EncodedObjectStorer
 	storer.ReferenceStorer
 	storer.ShallowStorer
-	storer.IndexStorer
 	config.ConfigStorer
 }
 

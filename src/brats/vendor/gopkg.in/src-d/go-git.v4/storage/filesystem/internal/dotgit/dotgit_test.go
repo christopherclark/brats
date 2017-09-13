@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/src-d/go-git-fixtures"
-	"srcd.works/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	osfs "gopkg.in/src-d/go-git.v4/utils/fs/os"
 
 	. "gopkg.in/check.v1"
-	"srcd.works/go-billy.v1/osfs"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -145,38 +145,6 @@ func (s *SuiteDotGit) TestConfigWriteAndConfig(c *C) {
 	c.Assert(err, IsNil)
 
 	f, err = dir.Config()
-	c.Assert(err, IsNil)
-
-	cnt, err := ioutil.ReadAll(f)
-	c.Assert(err, IsNil)
-
-	c.Assert(string(cnt), Equals, "foo")
-}
-
-func (s *SuiteDotGit) TestIndex(c *C) {
-	fs := fixtures.Basic().ByTag(".git").One().DotGit()
-	dir := New(fs)
-
-	idx, err := dir.Index()
-	c.Assert(err, IsNil)
-	c.Assert(idx, NotNil)
-}
-
-func (s *SuiteDotGit) TestIndexWriteAndIndex(c *C) {
-	tmp, err := ioutil.TempDir("", "dot-git")
-	c.Assert(err, IsNil)
-	defer os.RemoveAll(tmp)
-
-	fs := osfs.New(tmp)
-	dir := New(fs)
-
-	f, err := dir.IndexWriter()
-	c.Assert(err, IsNil)
-
-	_, err = f.Write([]byte("foo"))
-	c.Assert(err, IsNil)
-
-	f, err = dir.Index()
 	c.Assert(err, IsNil)
 
 	cnt, err := ioutil.ReadAll(f)

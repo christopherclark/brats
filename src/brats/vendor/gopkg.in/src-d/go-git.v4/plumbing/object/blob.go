@@ -3,9 +3,9 @@ package object
 import (
 	"io"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/storer"
-	"srcd.works/go-git.v4/utils/ioutil"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 // Blob is used to store file data - it is generally a file.
@@ -91,7 +91,7 @@ type BlobIter struct {
 	s storer.EncodedObjectStorer
 }
 
-// NewBlobIter returns a BlobIter for the given repository and underlying
+// NewBlobIter returns a CommitIter for the given repository and underlying
 // object iterator.
 //
 // The returned BlobIter will automatically skip over non-blob objects.

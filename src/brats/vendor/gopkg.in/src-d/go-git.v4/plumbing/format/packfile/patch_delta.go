@@ -3,7 +3,7 @@ package packfile
 import (
 	"io/ioutil"
 
-	"srcd.works/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 // See https://github.com/git/git/blob/49fa3dc76179e04b0833542fa52d0f287a4955ac/delta.h
@@ -13,7 +13,7 @@ import (
 
 const deltaSizeMin = 4
 
-// ApplyDelta writes to target the result of applying the modification deltas in delta to base.
+// ApplyDelta writes to taget the result of applying the modification deltas in delta to base.
 func ApplyDelta(target, base plumbing.EncodedObject, delta []byte) error {
 	r, err := base.Reader()
 	if err != nil {

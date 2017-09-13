@@ -2,13 +2,13 @@ package filesystem
 
 import (
 	"io/ioutil"
-	"os"
+	stdos "os"
 
-	"github.com/src-d/go-git-fixtures"
-	"srcd.works/go-git.v4/storage/filesystem/internal/dotgit"
+	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/storage/filesystem/internal/dotgit"
+	"gopkg.in/src-d/go-git.v4/utils/fs/os"
 
 	. "gopkg.in/check.v1"
-	"srcd.works/go-billy.v1/osfs"
 )
 
 type ConfigSuite struct {
@@ -24,7 +24,7 @@ func (s *ConfigSuite) SetUpTest(c *C) {
 	tmp, err := ioutil.TempDir("", "go-git-filestystem-config")
 	c.Assert(err, IsNil)
 
-	s.dir = dotgit.New(osfs.New(tmp))
+	s.dir = dotgit.New(os.New(tmp))
 	s.path = tmp
 }
 
@@ -45,5 +45,5 @@ func (s *ConfigSuite) TestRemotes(c *C) {
 }
 
 func (s *ConfigSuite) TearDownTest(c *C) {
-	defer os.RemoveAll(s.path)
+	defer stdos.RemoveAll(s.path)
 }

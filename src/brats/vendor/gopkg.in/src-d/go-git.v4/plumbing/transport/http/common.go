@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/protocol/packp"
-	"srcd.works/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 )
 
 type client struct {
@@ -25,7 +25,7 @@ var DefaultClient = NewClient(nil)
 // Note that for HTTP client cannot distinguist between private repositories and
 // unexistent repositories on GitHub. So it returns `ErrAuthorizationRequired`
 // for both.
-func NewClient(c *http.Client) transport.Transport {
+func NewClient(c *http.Client) transport.Client {
 	if c == nil {
 		return &client{http.DefaultClient}
 	}
@@ -35,16 +35,16 @@ func NewClient(c *http.Client) transport.Transport {
 	}
 }
 
-func (c *client) NewUploadPackSession(ep transport.Endpoint, auth transport.AuthMethod) (
-	transport.UploadPackSession, error) {
+func (c *client) NewFetchPackSession(ep transport.Endpoint) (
+	transport.FetchPackSession, error) {
 
-	return newUploadPackSession(c.c, ep, auth)
+	return newFetchPackSession(c.c, ep), nil
 }
 
-func (c *client) NewReceivePackSession(ep transport.Endpoint, auth transport.AuthMethod) (
-	transport.ReceivePackSession, error) {
+func (c *client) NewSendPackSession(ep transport.Endpoint) (
+	transport.SendPackSession, error) {
 
-	return newReceivePackSession(c.c, ep, auth)
+	return newSendPackSession(c.c, ep), nil
 }
 
 type session struct {
@@ -52,6 +52,16 @@ type session struct {
 	client   *http.Client
 	endpoint transport.Endpoint
 	advRefs  *packp.AdvRefs
+}
+
+func (s *session) SetAuth(auth transport.AuthMethod) error {
+	a, ok := auth.(AuthMethod)
+	if !ok {
+		return transport.ErrInvalidAuthMethod
+	}
+
+	s.auth = a
+	return nil
 }
 
 func (*session) Close() error {

@@ -1,15 +1,20 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"strings"
 
-	"srcd.works/go-git.v4/plumbing/format/pktline"
-	"srcd.works/go-git.v4/plumbing/transport"
-	"srcd.works/go-git.v4/plumbing/transport/internal/common"
-	"srcd.works/go-git.v4/utils/ioutil"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/internal/common"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
+)
+
+var (
+	errAlreadyConnected = errors.New("tcp connection already connected")
 )
 
 // DefaultClient is the default git client.
@@ -18,15 +23,12 @@ var DefaultClient = common.NewClient(&runner{})
 type runner struct{}
 
 // Command returns a new Command for the given cmd in the given Endpoint
-func (r *runner) Command(cmd string, ep transport.Endpoint, auth transport.AuthMethod) (common.Command, error) {
-	// auth not allowed since git protocol doesn't support authentication
-	if auth != nil {
-		return nil, transport.ErrInvalidAuthMethod
-	}
+func (r *runner) Command(cmd string, ep transport.Endpoint) (common.Command, error) {
 	c := &command{command: cmd, endpoint: ep}
 	if err := c.connect(); err != nil {
 		return nil, err
 	}
+
 	return c, nil
 }
 
@@ -35,6 +37,11 @@ type command struct {
 	connected bool
 	command   string
 	endpoint  transport.Endpoint
+}
+
+// SetAuth cannot be called since git protocol doesn't support authentication
+func (c *command) SetAuth(auth transport.AuthMethod) error {
+	return transport.ErrInvalidAuthMethod
 }
 
 // Start executes the command sending the required message to the TCP connection
@@ -47,7 +54,7 @@ func (c *command) Start() error {
 
 func (c *command) connect() error {
 	if c.connected {
-		return transport.ErrAlreadyConnected
+		return errAlreadyConnected
 	}
 
 	var err error

@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"srcd.works/go-git.v4/plumbing/format/pktline"
-	"srcd.works/go-git.v4/plumbing/protocol/packp"
-	"srcd.works/go-git.v4/plumbing/protocol/packp/capability"
-	"srcd.works/go-git.v4/plumbing/transport"
-	"srcd.works/go-git.v4/utils/ioutil"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp"
+	"gopkg.in/src-d/go-git.v4/plumbing/protocol/packp/capability"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 )
 
 const (
@@ -37,13 +37,15 @@ type Commander interface {
 	// error should be returned if the endpoint is not supported or the
 	// command cannot be created (e.g. binary does not exist, connection
 	// cannot be established).
-	Command(cmd string, ep transport.Endpoint, auth transport.AuthMethod) (Command, error)
+	Command(cmd string, ep transport.Endpoint) (Command, error)
 }
 
 // Command is used for a single command execution.
 // This interface is modeled after exec.Cmd and ssh.Session in the standard
 // library.
 type Command interface {
+	// SetAuth sets the authentication method.
+	SetAuth(transport.AuthMethod) error
 	// StderrPipe returns a pipe that will be connected to the command's
 	// standard error when the command starts. It should not be called after
 	// Start.
@@ -75,22 +77,22 @@ type client struct {
 }
 
 // NewClient creates a new client using the given Commander.
-func NewClient(runner Commander) transport.Transport {
+func NewClient(runner Commander) transport.Client {
 	return &client{runner}
 }
 
-// NewUploadPackSession creates a new UploadPackSession.
-func (c *client) NewUploadPackSession(ep transport.Endpoint, auth transport.AuthMethod) (
-	transport.UploadPackSession, error) {
+// NewFetchPackSession creates a new FetchPackSession.
+func (c *client) NewFetchPackSession(ep transport.Endpoint) (
+	transport.FetchPackSession, error) {
 
-	return c.newSession(transport.UploadPackServiceName, ep, auth)
+	return c.newSession(transport.UploadPackServiceName, ep)
 }
 
-// NewReceivePackSession creates a new ReceivePackSession.
-func (c *client) NewReceivePackSession(ep transport.Endpoint, auth transport.AuthMethod) (
-	transport.ReceivePackSession, error) {
+// NewSendPackSession creates a new SendPackSession.
+func (c *client) NewSendPackSession(ep transport.Endpoint) (
+	transport.SendPackSession, error) {
 
-	return c.newSession(transport.ReceivePackServiceName, ep, auth)
+	return c.newSession(transport.ReceivePackServiceName, ep)
 }
 
 type session struct {
@@ -105,8 +107,8 @@ type session struct {
 	errLines      chan string
 }
 
-func (c *client) newSession(s string, ep transport.Endpoint, auth transport.AuthMethod) (*session, error) {
-	cmd, err := c.cmdr.Command(s, ep, auth)
+func (c *client) newSession(s string, ep transport.Endpoint) (*session, error) {
+	cmd, err := c.cmdr.Command(s, ep)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +156,11 @@ func (c *client) listenErrors(r io.Reader) chan string {
 	}()
 
 	return errLines
+}
+
+// SetAuth delegates to the command's SetAuth.
+func (s *session) SetAuth(auth transport.AuthMethod) error {
+	return s.Command.SetAuth(auth)
 }
 
 // AdvertisedReferences retrieves the advertised references from the server.
@@ -212,9 +219,9 @@ func (s *session) handleAdvRefDecodeError(err error) error {
 	return err
 }
 
-// UploadPack performs a request to the server to fetch a packfile. A reader is
+// FetchPack performs a request to the server to fetch a packfile. A reader is
 // returned with the packfile content. The reader must be closed after reading.
-func (s *session) UploadPack(req *packp.UploadPackRequest) (*packp.UploadPackResponse, error) {
+func (s *session) FetchPack(req *packp.UploadPackRequest) (*packp.UploadPackResponse, error) {
 	if req.IsEmpty() {
 		return nil, transport.ErrEmptyUploadPackRequest
 	}
@@ -229,7 +236,7 @@ func (s *session) UploadPack(req *packp.UploadPackRequest) (*packp.UploadPackRes
 
 	s.packRun = true
 
-	if err := uploadPack(s.Stdin, s.Stdout, req); err != nil {
+	if err := fetchPack(s.Stdin, s.Stdout, req); err != nil {
 		return nil, err
 	}
 
@@ -252,7 +259,7 @@ func (s *session) UploadPack(req *packp.UploadPackRequest) (*packp.UploadPackRes
 	return DecodeUploadPackResponse(rc, req)
 }
 
-func (s *session) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.ReportStatus, error) {
+func (s *session) SendPack(req *packp.ReferenceUpdateRequest) (*packp.ReportStatus, error) {
 	if _, err := s.AdvertisedReferences(); err != nil {
 		return nil, err
 	}
@@ -274,8 +281,8 @@ func (s *session) ReceivePack(req *packp.ReferenceUpdateRequest) (*packp.ReportS
 		return nil, err
 	}
 
-	if err := report.Error(); err != nil {
-		return report, err
+	if !report.Ok() {
+		return report, fmt.Errorf("report status: %s", report.UnpackStatus)
 	}
 
 	return report, s.Command.Wait()
@@ -288,7 +295,7 @@ func (s *session) finish() error {
 
 	s.finished = true
 
-	// If we did not run a upload/receive-pack, we close the connection
+	// If we did not run fetch-pack or send-pack, we close the connection
 	// gracefully by sending a flush packet to the server. If the server
 	// operates correctly, it will exit with status 0.
 	if !s.packRun {
@@ -360,18 +367,18 @@ var (
 	eol = []byte("\n")
 )
 
-// uploadPack implements the git-upload-pack protocol.
+// fetchPack implements the git-fetch-pack protocol.
 //
 // TODO support multi_ack mode
 // TODO support multi_ack_detailed mode
 // TODO support acks for common objects
 // TODO build a proper state machine for all these processing options
-func uploadPack(w io.WriteCloser, r io.Reader, req *packp.UploadPackRequest) error {
+func fetchPack(w io.WriteCloser, r io.Reader, req *packp.UploadPackRequest) error {
 	if err := req.UploadRequest.Encode(w); err != nil {
 		return fmt.Errorf("sending upload-req message: %s", err)
 	}
 
-	if err := req.UploadHaves.Encode(w, true); err != nil {
+	if err := req.UploadHaves.Encode(w); err != nil {
 		return fmt.Errorf("sending haves message: %s", err)
 	}
 

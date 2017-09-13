@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"io"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/format/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 )
 
 const ackLineLen = 44
 
 // ServerResponse object acknowledgement from upload-pack service
+// TODO: implement support for multi_ack or multi_ack_detailed responses
 type ServerResponse struct {
-	// TODO: implement support for multi_ack or multi_ack_detailed responses
 	ACKs []plumbing.Hash
 }
 
@@ -67,18 +67,4 @@ func (r *ServerResponse) decodeACKLine(line []byte) error {
 	h := plumbing.NewHash(string(line[sp+1 : sp+41]))
 	r.ACKs = append(r.ACKs, h)
 	return nil
-}
-
-// Encode encodes the ServerResponse into a writer.
-func (r *ServerResponse) Encode(w io.Writer) error {
-	if len(r.ACKs) > 1 {
-		return errors.New("multi_ack and multi_ack_detailed are not supported")
-	}
-
-	e := pktline.NewEncoder(w)
-	if len(r.ACKs) == 0 {
-		return e.Encodef("%s\n", nak)
-	}
-
-	return e.Encodef("%s %s\n", ack, r.ACKs[0].String())
 }

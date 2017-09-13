@@ -3,8 +3,8 @@ package packp
 import (
 	"bytes"
 
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/format/pktline"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/pktline"
 
 	. "gopkg.in/check.v1"
 )
@@ -13,25 +13,22 @@ type ReportStatusSuite struct{}
 
 var _ = Suite(&ReportStatusSuite{})
 
-func (s *ReportStatusSuite) TestError(c *C) {
+func (s *ReportStatusSuite) TestOk(c *C) {
 	rs := NewReportStatus()
 	rs.UnpackStatus = "ok"
-	c.Assert(rs.Error(), IsNil)
+	c.Assert(rs.Ok(), Equals, true)
 	rs.UnpackStatus = "OK"
-	c.Assert(rs.Error(), ErrorMatches, "unpack error: OK")
+	c.Assert(rs.Ok(), Equals, false)
 	rs.UnpackStatus = ""
-	c.Assert(rs.Error(), ErrorMatches, "unpack error: ")
+	c.Assert(rs.Ok(), Equals, false)
 
-	cs := &CommandStatus{ReferenceName: plumbing.ReferenceName("ref")}
-	rs.UnpackStatus = "ok"
-	rs.CommandStatuses = append(rs.CommandStatuses, cs)
-
+	cs := &CommandStatus{}
 	cs.Status = "ok"
-	c.Assert(rs.Error(), IsNil)
+	c.Assert(cs.Ok(), Equals, true)
 	cs.Status = "OK"
-	c.Assert(rs.Error(), ErrorMatches, "command error on ref: OK")
+	c.Assert(cs.Ok(), Equals, false)
 	cs.Status = ""
-	c.Assert(rs.Error(), ErrorMatches, "command error on ref: ")
+	c.Assert(cs.Ok(), Equals, false)
 }
 
 func (s *ReportStatusSuite) testEncodeDecodeOk(c *C, rs *ReportStatus, lines ...string) {

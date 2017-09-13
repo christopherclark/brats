@@ -3,7 +3,7 @@ package packfile
 import (
 	"io/ioutil"
 
-	"srcd.works/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 // See https://github.com/jelmer/dulwich/blob/master/dulwich/pack.py and
@@ -49,7 +49,7 @@ func GetDelta(base, target plumbing.EncodedObject) (plumbing.EncodedObject, erro
 	return delta, nil
 }
 
-// DiffDelta returns the delta that transforms baseBuf into targetBuf.
+// DiffDelta returns the way of how to transform baseBuf to targetBuf
 func DiffDelta(baseBuf []byte, targetBuf []byte) []byte {
 	var outBuff []byte
 

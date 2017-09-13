@@ -3,15 +3,14 @@ package packfile_test
 import (
 	"io"
 
-	"srcd.works/go-billy.v1/memfs"
-
-	"github.com/src-d/go-git-fixtures"
-	"srcd.works/go-git.v4/plumbing"
-	"srcd.works/go-git.v4/plumbing/format/idxfile"
-	"srcd.works/go-git.v4/plumbing/format/packfile"
-	"srcd.works/go-git.v4/plumbing/storer"
-	"srcd.works/go-git.v4/storage/filesystem"
-	"srcd.works/go-git.v4/storage/memory"
+	"gopkg.in/src-d/go-git.v4/fixtures"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/idxfile"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
+	"gopkg.in/src-d/go-git.v4/storage/filesystem"
+	"gopkg.in/src-d/go-git.v4/storage/memory"
+	fs "gopkg.in/src-d/go-git.v4/utils/fs/memory"
 
 	. "gopkg.in/check.v1"
 )
@@ -45,52 +44,6 @@ func (s *ReaderSuite) TestDecode(c *C) {
 
 		assertObjects(c, storage, expectedHashes)
 	})
-}
-
-func (s *ReaderSuite) TestDecodeByType(c *C) {
-	ts := []plumbing.ObjectType{
-		plumbing.CommitObject,
-		plumbing.TagObject,
-		plumbing.TreeObject,
-		plumbing.BlobObject,
-	}
-
-	fixtures.Basic().ByTag("packfile").Test(c, func(f *fixtures.Fixture) {
-		for _, t := range ts {
-			storage := memory.NewStorage()
-			scanner := packfile.NewScanner(f.Packfile())
-			d, err := packfile.NewDecoderForType(scanner, storage, t)
-			c.Assert(err, IsNil)
-			defer d.Close()
-
-			_, count, err := scanner.Header()
-			c.Assert(err, IsNil)
-
-			var i uint32
-			for i = 0; i < count; i++ {
-				obj, err := d.DecodeObject()
-				c.Assert(err, IsNil)
-
-				if obj != nil {
-					c.Assert(obj.Type(), Equals, t)
-				}
-			}
-		}
-	})
-}
-func (s *ReaderSuite) TestDecodeByTypeConstructor(c *C) {
-	f := fixtures.Basic().ByTag("packfile").One()
-	storage := memory.NewStorage()
-	scanner := packfile.NewScanner(f.Packfile())
-
-	_, err := packfile.NewDecoderForType(scanner, storage, plumbing.OFSDeltaObject)
-	c.Assert(err, Equals, plumbing.ErrInvalidType)
-
-	_, err = packfile.NewDecoderForType(scanner, storage, plumbing.REFDeltaObject)
-	c.Assert(err, Equals, plumbing.ErrInvalidType)
-
-	_, err = packfile.NewDecoderForType(scanner, storage, plumbing.InvalidObject)
-	c.Assert(err, Equals, plumbing.ErrInvalidType)
 }
 
 func (s *ReaderSuite) TestDecodeMultipleTimes(c *C) {
@@ -164,7 +117,7 @@ func (s *ReaderSuite) TestDecodeNoSeekableWithoutTxStorer(c *C) {
 		scanner := packfile.NewScanner(reader)
 
 		var storage storer.EncodedObjectStorer
-		storage, _ = filesystem.NewStorage(memfs.New())
+		storage, _ = filesystem.NewStorage(fs.New())
 		_, isTxStorer := storage.(storer.Transactioner)
 		c.Assert(isTxStorer, Equals, false)
 
