@@ -15,5 +15,10 @@
   version = "1.2.0"
 
 [[constraint]]
-  name = "gopkg.in/src-d/go-git"
-  version = "v4"
+  name = "gopkg.in/src-d/go-git.v4"
+  source = "github.com/src-d/go-git"
+  branch = "v4"
+
+[[override]]
+  name = "github.com/elazarl/goproxy"
+  revision = "aacba83f36a55ac31cbb71c06547a328c0cd1604"

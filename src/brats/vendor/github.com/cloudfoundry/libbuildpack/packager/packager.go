@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,21 +17,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-type Manifest struct {
-	Language     string   `yaml:"language"`
-	IncludeFiles []string `yaml:"include_files"`
-	PrePackage   string   `yaml:"pre_package"`
-	Dependencies []struct {
-		URI string `yaml:"uri"`
-		MD5 string `yaml:"md5"`
-	} `yaml:"dependencies"`
-}
-
-type File struct {
-	Name, Path string
-}
-
-var CacheDir string = filepath.Join(os.Getenv("HOME"), ".buildpack-packager", "cache")
+var CacheDir = filepath.Join(os.Getenv("HOME"), ".buildpack-packager", "cache")
 
 func Package(bpDir, cacheDir, version string, cached bool) (string, error) {
 	bpDir, err := filepath.Abs(bpDir)
@@ -80,7 +67,7 @@ func Package(bpDir, cacheDir, version string, cached bool) (string, error) {
 
 			if _, err := os.Stat(dest); err != nil {
 				if os.IsNotExist(err) {
-					err = downloadFromUrl(d.URI, filepath.Join(cacheDir, dest))
+					err = downloadFromURI(d.URI, filepath.Join(cacheDir, dest))
 				}
 				if err != nil {
 					return "", err
@@ -106,7 +93,7 @@ func Package(bpDir, cacheDir, version string, cached bool) (string, error) {
 	return zipFile, err
 }
 
-func downloadFromUrl(url, fileName string) error {
+func downloadFromURI(uri, fileName string) error {
 	err := os.MkdirAll(filepath.Dir(fileName), 0755)
 	if err != nil {
 		return err
@@ -118,20 +105,35 @@ func downloadFromUrl(url, fileName string) error {
 	}
 	defer output.Close()
 
-	response, err := http.Get(url)
+	u, err := url.Parse(uri)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
 
-	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return fmt.Errorf("could not download: %d", response.StatusCode)
+	var source io.ReadCloser
+
+	if u.Scheme == "file" {
+		source, err = os.Open(u.Path)
+		if err != nil {
+			return err
+		}
+		defer source.Close()
+	} else {
+		response, err := http.Get(uri)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
+		source = response.Body
+
+		if response.StatusCode < 200 || response.StatusCode > 299 {
+			return fmt.Errorf("could not download: %d", response.StatusCode)
+		}
 	}
 
-	if _, err := io.Copy(output, response.Body); err != nil {
-		return err
-	}
-	return nil
+	_, err = io.Copy(output, source)
+
+	return err
 }
 
 func checkMD5(filePath, expectedMD5 string) error {

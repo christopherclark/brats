@@ -5,13 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"time"
 
-	"github.com/blang/semver"
 	"github.com/cloudfoundry/libbuildpack/cutlass"
 	"github.com/cloudfoundry/libbuildpack/packager"
 
@@ -40,28 +37,34 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	fmt.Println("Download repo")
 	bpDir, err = ioutil.TempDir("", fmt.Sprintf("%s-buildpack", language))
 	Expect(err).NotTo(HaveOccurred())
-	commit, err := GitGet(bpDir, language, branch)
+	commit, err := GitGet(bpDir, language, buildpackBranch)
 	Expect(err).NotTo(HaveOccurred())
 	fmt.Println(commit)
 
 	buildpackVersion := fmt.Sprintf("brats_%s_%s_", language, time.Now().Format("20060102150405"))
 
 	fmt.Println("Package cached")
-	fileCached, err := packager.Package(bpDir, packager.CacheDir, , true)
+	fileCached, err := packager.Package(bpDir, packager.CacheDir, buildpackVersion+"cached", true)
 	Expect(err).NotTo(HaveOccurred())
 	command := exec.Command("cf", "create-buildpack", buildpackVersion+"cached", fileCached, "100", "--enable")
-	Expect(command.CombinedOutput()).To(Succeed())
+	if output, err := command.CombinedOutput(); err != nil {
+		fmt.Println(string(output))
+		Fail("Could not create buildpack")
+	}
 
 	fmt.Println("Package uncached")
 	fileUncached, err := packager.Package(bpDir, packager.CacheDir, buildpackVersion+"uncached", false)
 	Expect(err).NotTo(HaveOccurred())
 	command = exec.Command("cf", "create-buildpack", buildpackVersion+"uncached", fileUncached, "100", "--enable")
-	Expect(command.CombinedOutput()).To(Succeed())
+	if output, err := command.CombinedOutput(); err != nil {
+		fmt.Println(string(output))
+		Fail("Could not create buildpack")
+	}
 
 	data, err := json.Marshal([]string{
 		bpDir,
-		fileCached, buildpackVersion+"cached",
-		fileUncached, buildpackVersion+"uncached",
+		fileCached, buildpackVersion + "cached",
+		fileUncached, buildpackVersion + "uncached",
 	})
 	Expect(err).NotTo(HaveOccurred())
 	return data
@@ -81,10 +84,12 @@ var _ = SynchronizedAfterSuite(func() {
 	// Run on all nodes
 }, func() {
 	// Run once
-	Expect(os.Remove(data[1])).To(Succeed())
-	Expect(exec.Command("cf", "delete-buildpack", data[2]).Run()).To(Succeed())
-	Expect(os.Remove(data[3])).To(Succeed())
-	Expect(exec.Command("cf", "delete-buildpack", data[4]).Run()).To(Succeed())
+	if len(bpData) > 0 {
+		Expect(os.Remove(bpData[1])).To(Succeed())
+		Expect(exec.Command("cf", "delete-buildpack", bpData[2]).Run()).To(Succeed())
+		Expect(os.Remove(bpData[3])).To(Succeed())
+		Expect(exec.Command("cf", "delete-buildpack", bpData[4]).Run()).To(Succeed())
+	}
 
 	Expect(cutlass.DeleteOrphanedRoutes()).To(Succeed())
 })
@@ -127,12 +132,12 @@ func TestIntegration(t *testing.T) {
 // 	}
 // }
 
-// func DestroyApp(app *cutlass.App) *cutlass.App {
-// 	if app != nil {
-// 		app.Destroy()
-// 	}
-// 	return nil
-// }
+func DestroyApp(app *cutlass.App) *cutlass.App {
+	if app != nil {
+		app.Destroy()
+	}
+	return nil
+}
 
 // func AssertUsesProxyDuringStagingIfPresent(fixtureName string) {
 // 	Context("with an uncached buildpack", func() {

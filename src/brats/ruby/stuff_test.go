@@ -3,6 +3,7 @@ package ruby_test
 import (
 	"fmt"
 
+	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
@@ -33,5 +34,5 @@ func GitGet(directory, language, branch string) (string, error) {
 		return "", err
 	}
 
-	return commit, err
+	return commit.String(), err
 }
