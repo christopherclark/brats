@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"time"
@@ -18,14 +17,13 @@ import (
 	"testing"
 )
 
-var buildpackBranch string
 var bpData []string
 var bpDir string
 
 const language = "ruby"
 
 func init() {
-	flag.StringVar(&buildpackBranch, "branch", "master", "git branch to use (master if empty)")
+	flag.StringVar(&bpDir, "bpdir", "", "git branch to use (master if empty)")
 	flag.StringVar(&cutlass.DefaultMemory, "memory", "256M", "default memory for pushed apps")
 	flag.StringVar(&cutlass.DefaultDisk, "disk", "384M", "default disk for pushed apps")
 	flag.Parse()
@@ -33,13 +31,9 @@ func init() {
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	// Run once
-	var err error
-	fmt.Println("Download repo")
-	bpDir, err = ioutil.TempDir("", fmt.Sprintf("%s-buildpack", language))
-	Expect(err).NotTo(HaveOccurred())
-	commit, err := GitGet(bpDir, language, buildpackBranch)
-	Expect(err).NotTo(HaveOccurred())
-	fmt.Println(commit)
+	if bpDir == "" {
+		Fail("You must provide bpdir switch")
+	}
 
 	buildpackVersion := fmt.Sprintf("brats_%s_%s_", language, time.Now().Format("20060102150405"))
 

@@ -19,11 +19,11 @@ var _ = Describe("For the ruby buildpack", func() {
 		PIt("prints useful warning message to stdout")
 	})
 
-	It("For all supported Ruby versions", func() {
+	Describe("For all supported Ruby versions", func() {
 		manifest, _ := libbuildpack.NewManifest(bpDir, libbuildpack.NewLogger(os.Stdout), time.Now())
 		for _, version := range manifest.AllDependencyVersions("ruby") {
-			By("with Ruby version "+version, func() {
-				By("is true", func() {
+			Context("with Ruby version "+version, func() {
+				It("is true", func() {
 					Expect(true).To(BeTrue())
 				})
 			})
