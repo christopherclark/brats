@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-ruby '<%= ruby_version %>'
+ruby '{{.RubyVersion}}'
 
 gem 'nokogiri'
 gem 'sinatra'

@@ -61,10 +61,10 @@
   version = "v1.3.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/tidwall/gjson"
   packages = ["."]
   revision = "be96719f990978a867f52c48f29d43f6b591da28"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -88,7 +88,7 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context","html","html/atom","html/charset"]
-  revision = "b129b8e0fbeb39c8358e51a07ab6c50ad415e72e"
+  revision = "859d1a86bb617c0c20d154590c3c5d3fcb670b07"
 
 [[projects]]
   branch = "master"
@@ -100,7 +100,7 @@
   branch = "master"
   name = "golang.org/x/text"
   packages = ["encoding","encoding/charmap","encoding/htmlindex","encoding/internal","encoding/internal/identifier","encoding/japanese","encoding/korean","encoding/simplifiedchinese","encoding/traditionalchinese","encoding/unicode","internal/gen","internal/tag","internal/triegen","internal/ucd","internal/utf8internal","language","runes","transform","unicode/cldr","unicode/norm"]
-  revision = "acd49d43e9b95df46670431bf5c7ae59586daad8"
+  revision = "1cbadb444a806fd9430d14ad08967ed91da4fa0a"
 
 [[projects]]
   name = "gopkg.in/src-d/go-billy.v3"

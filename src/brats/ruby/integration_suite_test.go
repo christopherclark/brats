@@ -18,7 +18,7 @@ import (
 )
 
 var bpData []string
-var bpDir string
+var bpDir, buildpackVersion, buildpackCached, buildpackUncached string
 
 const language = "ruby"
 
@@ -35,12 +35,13 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		Fail("You must provide BP_DIR env")
 	}
 
-	buildpackVersion := fmt.Sprintf("brats_%s_%s_", language, time.Now().Format("20060102150405"))
+	buildpackVersion = fmt.Sprintf("brats_%s_%s_", language, time.Now().Format("20060102150405"))
 
 	fmt.Println("Package cached")
 	fileCached, err := packager.Package(bpDir, packager.CacheDir, buildpackVersion+"cached", true)
 	Expect(err).NotTo(HaveOccurred())
-	command := exec.Command("cf", "create-buildpack", buildpackVersion+"cached", fileCached, "100", "--enable")
+	buildpackCached = buildpackVersion + "cached"
+	command := exec.Command("cf", "create-buildpack", buildpackCached, fileCached, "100", "--enable")
 	if output, err := command.CombinedOutput(); err != nil {
 		fmt.Println(string(output))
 		Fail("Could not create buildpack")
@@ -49,16 +50,17 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	fmt.Println("Package uncached")
 	fileUncached, err := packager.Package(bpDir, packager.CacheDir, buildpackVersion+"uncached", false)
 	Expect(err).NotTo(HaveOccurred())
-	command = exec.Command("cf", "create-buildpack", buildpackVersion+"uncached", fileUncached, "100", "--enable")
+	buildpackUncached = buildpackVersion + "uncached"
+	command = exec.Command("cf", "create-buildpack", buildpackUncached, fileUncached, "100", "--enable")
 	if output, err := command.CombinedOutput(); err != nil {
 		fmt.Println(string(output))
 		Fail("Could not create buildpack")
 	}
 
 	data, err := json.Marshal([]string{
-		bpDir,
-		fileCached, buildpackVersion + "cached",
-		fileUncached, buildpackVersion + "uncached",
+		bpDir, buildpackVersion,
+		fileCached, buildpackCached,
+		fileUncached, buildpackUncached,
 	})
 	Expect(err).NotTo(HaveOccurred())
 	return data
@@ -69,6 +71,9 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	Expect(err).NotTo(HaveOccurred())
 
 	bpDir = bpData[0]
+	buildpackVersion = bpData[1]
+	buildpackCached = bpData[3]
+	buildpackUncached = bpData[5]
 
 	cutlass.SeedRandom()
 	cutlass.DefaultStdoutStderr = GinkgoWriter
@@ -79,10 +84,10 @@ var _ = SynchronizedAfterSuite(func() {
 }, func() {
 	// Run once
 	if len(bpData) > 0 {
-		Expect(os.Remove(bpData[1])).To(Succeed())
-		Expect(exec.Command("cf", "delete-buildpack", bpData[2]).Run()).To(Succeed())
-		Expect(os.Remove(bpData[3])).To(Succeed())
-		Expect(exec.Command("cf", "delete-buildpack", bpData[4]).Run()).To(Succeed())
+		Expect(os.Remove(bpData[2])).To(Succeed())
+		Expect(exec.Command("cf", "delete-buildpack", buildpackCached).Run()).To(Succeed())
+		Expect(os.Remove(bpData[4])).To(Succeed())
+		Expect(exec.Command("cf", "delete-buildpack", buildpackUncached).Run()).To(Succeed())
 	}
 
 	Expect(cutlass.DeleteOrphanedRoutes()).To(Succeed())
@@ -93,11 +98,13 @@ func TestIntegration(t *testing.T) {
 	RunSpecs(t, "Integration Suite")
 }
 
-// func PushAppAndConfirm(app *cutlass.App) {
-// 	Expect(app.Push()).To(Succeed())
-// 	Eventually(func() ([]string, error) { return app.InstanceStates() }, 20*time.Second).Should(Equal([]string{"RUNNING"}))
-// 	Expect(app.ConfirmBuildpack(buildpackVersion)).To(Succeed())
-// }
+func PushAppAndConfirm(app *cutlass.App) {
+	Expect(app.Push()).To(Succeed())
+	Eventually(func() ([]string, error) { return app.InstanceStates() }, 20*time.Second).Should(Equal([]string{"RUNNING"}))
+	if app.Buildpack == "" {
+		Expect(app.ConfirmBuildpack(buildpackVersion)).To(Succeed())
+	}
+}
 
 // func Restart(app *cutlass.App) {
 // 	Expect(app.Restart()).To(Succeed())
