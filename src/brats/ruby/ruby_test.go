@@ -20,6 +20,22 @@ var _ = Describe("For the ruby buildpack", func() {
 	var app *cutlass.App
 	AfterEach(func() { app = DestroyApp(app) })
 
+	generateApp := func(rubyVersion string) string {
+		appDir, err := cutlass.CopyFixture(filepath.Join(rootDir, "fixtures", "ruby", "simple_brats"))
+		Expect(err).ToNot(HaveOccurred())
+
+		gemfile, err := template.ParseFiles(filepath.Join(appDir, "Gemfile"))
+		Expect(err).ToNot(HaveOccurred())
+
+		fh, err := os.Create(filepath.Join(appDir, "Gemfile"))
+		Expect(err).ToNot(HaveOccurred())
+		defer fh.Close()
+
+		Expect(gemfile.Execute(fh, map[string]string{"RubyVersion": rubyVersion})).To(Succeed())
+
+		return appDir
+	}
+
 	Describe("deploying an app with an updated version of the same buildpack", func() {
 		PIt("prints useful warning message to stdout")
 	})
@@ -29,21 +45,10 @@ var _ = Describe("For the ruby buildpack", func() {
 		for _, version2 := range manifest.AllDependencyVersions("ruby") {
 			version := version2
 			It("with Ruby version "+version, func() {
-				appDir, err := cutlass.CopyFixture(filepath.Join(rootDir, "fixtures", "ruby", "simple_brats"))
-				Expect(err).ToNot(HaveOccurred())
-				defer os.RemoveAll(appDir)
-
-				gemfile, err := template.ParseFiles(filepath.Join(appDir, "Gemfile"))
-				Expect(err).ToNot(HaveOccurred())
-
-				fh, err := os.Create(filepath.Join(appDir, "Gemfile"))
-				Expect(err).ToNot(HaveOccurred())
-				defer fh.Close()
-
-				Expect(gemfile.Execute(fh, map[string]string{"RubyVersion": version})).To(Succeed())
-
+				appDir := generateApp(version)
 				app = cutlass.New(appDir)
 				app.Buildpack = buildpackCached
+				defer os.RemoveAll(appDir)
 
 				By("installs the correct version of Ruby", func() {
 					PushAppAndConfirm(app)
@@ -74,9 +79,6 @@ var _ = Describe("For the ruby buildpack", func() {
 
 				By("encrypts with bcrypt", func() {
 					for i := 1; i <= 2; i++ {
-						// browser.visit_path("/bcrypt")
-						// crypted_text = BCrypt::Password.new(browser.body)
-						// expect(crypted_text).to eq "Hello, bcrypt"
 						cryptedText, err := app.GetBody("/bcrypt")
 						Expect(err).ToNot(HaveOccurred())
 						Expect(bcrypt.CompareHashAndPassword([]byte(cryptedText), []byte("Hello, bcrypt"))).To(Succeed())
@@ -106,21 +108,30 @@ var _ = Describe("For the ruby buildpack", func() {
 
 	PIt("staging with ruby buildpack that sets EOL on dependency", func() {})
 
-	// BeforeEach(func() {
-	// 	app = cutlass.New(filepath.Join(bpDir, "fixtures", "rails51"))
-	// 	app.SetEnv("BP_DEBUG", "1")
-	// })
+	Describe("staging with a version of ruby that is not the latest patch release in the manifest", func() {
+		var appDir string
+		BeforeEach(func() {
+			manifest, _ := libbuildpack.NewManifest(os.Getenv("BP_DIR"), libbuildpack.NewLogger(os.Stdout), time.Now())
+			versions := manifest.AllDependencyVersions("ruby")
+			Expect(len(versions) > 0).To(BeTrue())
+			// FIXME SORT FIRST
+			appDir = generateApp(versions[0])
+			app = cutlass.New(appDir)
+			app.Buildpack = buildpackCached
+			PushAppAndConfirm(app)
+		})
+		AfterEach(func() {
+			if appDir != "" {
+				_ = os.RemoveAll(appDir)
+			}
+		})
 
-	// It("Installs node6 and runs", func() {
-	// 	PushAppAndConfirm(app)
-	// 	Expect(app.Stdout.String()).To(ContainSubstring("Installing node 6."))
+		FIt("logs a warning that tells the user to upgrade the dependency", func() {
+			// Expect(app).to have_logged(/WARNING.*A newer version of ruby is available in this buildpack/)
+			Expect(app.Stdout.String()).To(ContainSubstring("WARNING.*A newer version of ruby is available in this buildpack"))
+		})
+	})
 
-	// 	Expect(app.GetBody("/")).To(ContainSubstring("Hello World"))
-	// 	Eventually(func() string { return app.Stdout.String() }, 10*time.Second).Should(ContainSubstring(`Started GET "/" for`))
+	PIt("staging with custom buildpack that uses credentials in manifest dependency uris", func() {})
 
-	// 	By("Make sure supply does not change BuildDir", func() {
-	// 		Expect(app.Stdout.String()).To(ContainSubstring("BuildDir Checksum Before Supply: 5d823d48d154ee2622e8cf8c2fb21ff7"))
-	// 		Expect(app.Stdout.String()).To(ContainSubstring("BuildDir Checksum After Supply: 5d823d48d154ee2622e8cf8c2fb21ff7"))
-	// 	})
-	// })
 })
