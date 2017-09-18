@@ -111,10 +111,9 @@ var _ = Describe("For the ruby buildpack", func() {
 	Describe("staging with a version of ruby that is not the latest patch release in the manifest", func() {
 		var appDir string
 		BeforeEach(func() {
-			manifest, _ := libbuildpack.NewManifest(os.Getenv("BP_DIR"), libbuildpack.NewLogger(os.Stdout), time.Now())
-			versions := manifest.AllDependencyVersions("ruby")
+			versions, err := GetSortedDepVersions("ruby")
+			Expect(err).ToNot(HaveOccurred())
 			Expect(len(versions) > 0).To(BeTrue())
-			// FIXME SORT FIRST
 			appDir = generateApp(versions[0])
 			app = cutlass.New(appDir)
 			app.Buildpack = buildpackCached
@@ -126,12 +125,57 @@ var _ = Describe("For the ruby buildpack", func() {
 			}
 		})
 
-		FIt("logs a warning that tells the user to upgrade the dependency", func() {
-			// Expect(app).to have_logged(/WARNING.*A newer version of ruby is available in this buildpack/)
+		It("logs a warning that tells the user to upgrade the dependency", func() {
 			Expect(app.Stdout.String()).To(ContainSubstring("WARNING.*A newer version of ruby is available in this buildpack"))
 		})
 	})
 
 	PIt("staging with custom buildpack that uses credentials in manifest dependency uris", func() {})
 
+	It("deploying an app that has an executable .profile script", func() {
+		versions, err := GetSortedDepVersions("ruby")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(len(versions) > 0).To(BeTrue())
+		appDir := generateApp(versions[len(versions)-1])
+		defer os.RemoveAll(appDir)
+		app = cutlass.New(appDir)
+		app.Buildpack = buildpackCached
+		Expect(AddDotProfileScriptToApp(app.Path)).To(Succeed())
+		PushAppAndConfirm(app)
+
+		By("executes the .profile script", func() {
+			Expect(app.Stdout.String()).To(ContainSubstring("PROFILE_SCRIPT_IS_PRESENT_AND_RAN"))
+		})
+
+		By("does not let me view the .profile script", func() {
+			body, err := app.GetBody("/.profile")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(body).ToNot(ContainSubstring("Unknown MySQL server host 'testing'"))
+			Expect(body).To(ContainSubstring("<h1>Not Found</h1>"))
+		})
+	})
+
+	Describe("deploying an app that has sensitive environment variables", func() {
+		var appDir string
+		BeforeEach(func() {
+			versions, err := GetSortedDepVersions("ruby")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(versions) > 0).To(BeTrue())
+			appDir = generateApp(versions[len(versions)-1])
+			app = cutlass.New(appDir)
+			app.Buildpack = buildpackCached
+			Expect(AddDotProfileScriptToApp(app.Path)).To(Succeed())
+			PushAppAndConfirm(app)
+		})
+		AfterEach(func() {
+			if appDir != "" {
+				_ = os.RemoveAll(appDir)
+			}
+		})
+
+		PIt("will not write credentials to the app droplet", func() {
+			// FIXME -- https://github.com/cloudfoundry/machete/blob/7f517ffa07d99362ab86ccab654dbed8583c6213/lib/machete/matchers/app_keeps_credentials_out_of_droplet.rb
+			// expect(app.name).to keep_credentials_out_of_droplet
+		})
+	})
 })
