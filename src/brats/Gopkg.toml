@@ -1,0 +1,11 @@
+[[constraint]]
+  branch = "master"
+  name = "github.com/cloudfoundry/libbuildpack"
+
+[[constraint]]
+  name = "github.com/sclevine/spec"
+  branch = "master"
+
+[[override]]
+  name = "github.com/elazarl/goproxy"
+  revision = "aacba83f36a55ac31cbb71c06547a328c0cd1604"
